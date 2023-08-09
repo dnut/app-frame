@@ -49,15 +49,15 @@ macro_rules! application {
         $self:ident: $Provider:ident
         $(init [
             $($JobIterable:block $(as [$ProvidedJobType:ident])?,)*
-            $($Job:ty $(as $JobType:ident)?),*$(,)?
+            $($Job:ty $(as $($JobAs:ty)|+)?),*$(,)?
         ])?
         $(services [
             $($SvcIterable:block $(as [$ProvidedSvcType:ident])?,)*
-            $($Svc:ty $(as $SvcType:ident)?),*$(,)?
+            $($Svc:ty $(as $($SvcAs:ty)|+)?),*$(,)?
         ])?
         $(components [
             // $($Component:ty $(: $ComponentType:ident)?),+$(,)?
-            $($Component:ty $(as $DynTrait:ty)?),+$(,)?
+            $($Component:ty $(as $($CompAs:ty)|+)?),+$(,)?
         ])?
         $(provided {
             $($($Provided:ty),+: $logic:expr),+$(,)?
@@ -71,6 +71,15 @@ macro_rules! application {
                         <$Job>::from(self)
                     }
                 }
+                $(
+                    $(
+                        impl $crate::dependency_injection::Provides<std::sync::Arc<$JobAs>> for $Provider {
+                            fn provide(&self) -> std::sync::Arc<$JobAs> {
+                                std::sync::Arc::new(<$Job>::from(self).into())
+                            }
+                        }
+                    )+
+                )?
             )*
         )?
         impl $crate::service_manager::Initialize for $Provider {
@@ -100,6 +109,15 @@ macro_rules! application {
                         <$Svc>::from(self)
                     }
                 }
+                $(
+                    $(
+                        impl $crate::dependency_injection::Provides<std::sync::Arc<$SvcAs>> for $Provider {
+                            fn provide(&self) -> std::sync::Arc<$SvcAs> {
+                                std::sync::Arc::new(<$Svc>::from(self).into())
+                            }
+                        }
+                    )+
+                )?
             )*
         )?
         impl $crate::service_manager::Serves for $Provider {
@@ -114,8 +132,10 @@ macro_rules! application {
                     })*
                     $(
                         let component: $Svc = $self.provide();
-                        $(let component = $SvcType::from(component);)?
-                        services.push(Box::new(component));
+                        $($(
+                            let component = <$SvcAs>::from(component);
+                            services.push(Box::new(component));
+                        )+)?
                     )*
                 )?
                 services
@@ -130,11 +150,13 @@ macro_rules! application {
                 }
             }
             $(
-                impl $crate::dependency_injection::Provides<std::sync::Arc<$DynTrait>> for $Provider {
-                    fn provide(&self) -> std::sync::Arc<$DynTrait> {
-                        std::sync::Arc::new(<$Component>::from(self))
+                $(
+                    impl $crate::dependency_injection::Provides<std::sync::Arc<$CompAs>> for $Provider {
+                        fn provide(&self) -> std::sync::Arc<$CompAs> {
+                            std::sync::Arc::new(<$Component>::from(self))
+                        }
                     }
-                }
+                )+
             )?
         )*)?
         // Provided
