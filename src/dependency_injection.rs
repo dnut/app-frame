@@ -48,15 +48,14 @@ macro_rules! application {
     (
         $self:ident: $Provider:ident
         $(init [
-            $($JobIterable:block $(as [$ProvidedJobType:ident])?,)*
+            $($JobIterable:block,)*
             $($Job:ty $(as $($JobAs:ty)|+)?),*$(,)?
         ])?
         $(services [
-            $($SvcIterable:block $(as [$ProvidedSvcType:ident])?,)*
+            $($SvcIterable:block,)*
             $($Svc:ty $(as $($SvcAs:ty)|+)?),*$(,)?
         ])?
         $(components [
-            // $($Component:ty $(: $ComponentType:ident)?),+$(,)?
             $($Component:ty $(as $($CompAs:ty)|+)?),+$(,)?
         ])?
         $(provided {
@@ -64,24 +63,6 @@ macro_rules! application {
         })?
     ) => {
         // Init
-        $(
-            $(
-                impl $crate::dependency_injection::Provides<$Job> for $Provider {
-                    fn provide(&self) -> $Job {
-                        <$Job>::from(self)
-                    }
-                }
-                $(
-                    $(
-                        impl $crate::dependency_injection::Provides<std::sync::Arc<$JobAs>> for $Provider {
-                            fn provide(&self) -> std::sync::Arc<$JobAs> {
-                                std::sync::Arc::new(<$Job>::from(self).into())
-                            }
-                        }
-                    )+
-                )?
-            )*
-        )?
         impl $crate::service_manager::Initialize for $Provider {
             fn init(&$self) -> Vec<std::sync::Arc<dyn $crate::service::Job>> {
                 #[allow(unused_imports)]
@@ -93,8 +74,11 @@ macro_rules! application {
                         jobs.push(provided);
                     })*
                     $(
-                        let job: $Job = $self.provide();
-                        jobs.push(std::sync::Arc::new(job));
+                        let job = <$Job>::from($self);
+                        $($(
+                            let job = <$JobAs>::from(job);
+                            jobs.push(std::sync::Arc::new(job));
+                        )+)?
                     )*
                 )?
                 jobs
@@ -102,24 +86,6 @@ macro_rules! application {
         }
 
         // Services
-        $(
-            $(
-                impl $crate::dependency_injection::Provides<$Svc> for $Provider {
-                    fn provide(&self) -> $Svc {
-                        <$Svc>::from(self)
-                    }
-                }
-                $(
-                    $(
-                        impl $crate::dependency_injection::Provides<std::sync::Arc<$SvcAs>> for $Provider {
-                            fn provide(&self) -> std::sync::Arc<$SvcAs> {
-                                std::sync::Arc::new(<$Svc>::from(self).into())
-                            }
-                        }
-                    )+
-                )?
-            )*
-        )?
         impl $crate::service_manager::Serves for $Provider {
             fn services(&$self) -> Vec<Box<dyn $crate::service::Service>> {
                 #[allow(unused_imports)]
@@ -131,7 +97,7 @@ macro_rules! application {
                         services.push(Box::new(provided));
                     })*
                     $(
-                        let component: $Svc = $self.provide();
+                        let component = <$Svc>::from($self);
                         $($(
                             let component = <$SvcAs>::from(component);
                             services.push(Box::new(component));
