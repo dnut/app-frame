@@ -49,11 +49,11 @@ macro_rules! application {
         $self:ident: $Provider:ident
         $(init [
             $($JobIterable:block,)*
-            $($Job:ty $(as $($JobAs:ty)|+)?),*$(,)?
+            $($Job:ty $(as $JobAs:ty)?),*$(,)?
         ])?
         $(services [
             $($SvcIterable:block,)*
-            $($Svc:ty $(as $($SvcAs:ty)|+)?),*$(,)?
+            $($Svc:ty $(as $SvcAs:ty)?),*$(,)?
         ])?
         $(components [
             $($Component:ty $(as $($CompAs:ty)|+)?),+$(,)?
@@ -75,10 +75,8 @@ macro_rules! application {
                     })*
                     $(
                         let job = <$Job>::from($self);
-                        $($(
-                            let job = <$JobAs>::from(job);
-                            jobs.push(std::sync::Arc::new(job));
-                        )+)?
+                        $(let job = <$JobAs>::from(job);)?
+                        jobs.push(std::sync::Arc::new(job));
                     )*
                 )?
                 jobs
@@ -97,11 +95,9 @@ macro_rules! application {
                         services.push(Box::new(provided));
                     })*
                     $(
-                        let component = <$Svc>::from($self);
-                        $($(
-                            let component = <$SvcAs>::from(component);
-                            services.push(Box::new(component));
-                        )+)?
+                        let service = <$Svc>::from($self);
+                        $(let service = <$SvcAs>::from(service);)?
+                        services.push(Box::new(service));
                     )*
                 )?
                 services
