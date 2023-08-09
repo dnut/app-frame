@@ -1,0 +1,33 @@
+[package]
+name = "app-frame"
+version = "0.1.0"
+edition = "2021"
+description = "Compile-time dependency-injected application framework with a service orchestrator."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/dnut/app-frame"
+readme = "README.md"
+keywords = ["dependency", "injection", "inject", "framework", "service"]
+categories = [
+    "config",
+    "rust-patterns",
+    "development-tools",
+    "web-programming",
+    "concurrency",
+]
+
+[lib]
+crate-type = ["lib"]
+name = "app_frame"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = { version = "1.0", features = ["backtrace"] }
+async-trait = "0.1.64"
+futures = "0.3"
+hyper = { version = "0.14.26", features = ["full"] }
+ordered-float = "3.6.0"
+parking_lot = { version = "0.12", features = ["send_guard"] }
+priority-queue = "1.3.1"
+regex = "1.8.3"
+tokio = "1"
+tracing = { version = "0.1", features = ["log"] }
