@@ -22,7 +22,17 @@
 //! app-frame is right for your project, see the [Trade-offs](#trade-offs)
 //! section.
 //!
-//! ## Usage
+//! - [Quick Start](#quick-start)
+//! - [Features](#features)
+//!   - [Make Components Injectible](#make-components-injectible)
+//!   - [Define Services](#define-services)
+//!   - [Declare the App](#declare-the-app)
+//!   - [Declare Application Components](#declare-application-components)
+//!   - [Customize Service Orchestration](#customize-service-orchestration)
+//! - [Full macro-based example](#full-macro-based-example)
+//! - [Trade-offs](#trade-offs)
+//!
+//! ## Quick Start
 //!
 //! ```toml
 //! [dependencies]
@@ -69,6 +79,8 @@
 //!     }
 //! }
 //! ```
+//!
+//! ## Features
 //!
 //! To take full advantage of app-frame, you should define dependency
 //! relationships and explicitly declare every component that you want to run as
@@ -229,7 +241,7 @@
 //!     .await
 //! ```
 //!
-//! ### Full macro-based example
+//! ## Full macro-based example
 //!
 //! This example defines and injects various types of components to illustrate
 //! the various features provided by the framework. This code actually runs an
@@ -440,7 +452,7 @@
 //! }
 //! ```
 //!
-//! # Trade-offs
+//! ## Trade-offs
 //! Application frameworks are often not worth the complexity, but they do have
 //! utility in many cases. App Frame would typically be useful in a complicated
 //! backend web service with a lot of connections to other services, or whenever
