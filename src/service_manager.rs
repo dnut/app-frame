@@ -94,11 +94,13 @@ pub trait Initialize {
     /// Calling this function does not run the jobs. You must run them some
     /// other way.
     #[must_use]
-    fn init(&self) -> Vec<Arc<dyn Job>>;
+    fn init(&self) -> Vec<Arc<dyn Job>> {
+        vec![]
+    }
 }
 
 pub trait Serves {
-    /// Returns the long running services that should run.
+    /// Returns the services that should run for the entire life of the app.
     ///
     /// Calling this function does not run the services. You must run them some
     /// other way.

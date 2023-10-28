@@ -8,7 +8,7 @@ App Frame is a compile-time dependency-injected application framework with a ser
 1. Reliably run and monitor multiple long-running services, recovering from any errors.
 2. Reduce the boilerplate and maintenance cost of manually constructing application components that have a complex dependency graph. You should only need to describe your application's components. The rust compiler can wire them up.
 
-At compile-time, the framework guarantees that all necessary dependencies will be injected upon application startup. At runtime, the framework runs your custom initialization code, then starts your services, automatically injects their dependencies, monitors their health, and reports their status to external http health checks.
+At compile-time, the framework guarantees that all necessary dependencies will be injected upon application startup. At runtime, the framework runs your custom initialization code, then starts your services, automatically injects their dependencies, monitors their health, restarts unhealthy services, and reports their status to external http health checks.
 
 Application frameworks add complexity and obscure control flow, but they can also save a lot of time with setup and maintenance tasks. To be sure app-frame is right for your project, see the [Trade-offs](#trade-offs) section.
 
@@ -16,10 +16,10 @@ Application frameworks add complexity and obscure control flow, but they can als
 
 ```toml
 [dependencies]
-app_frame = "0.3.0"
+app-frame = "0.3.1"
 ```
 
-App Frame provides macros for convenience. If they feel too esoteric or inflexible, you can alternatively implement traits to wire up your application.
+App Frame provides macros for convenience. If they seem too esoteric or inflexible, you can instead implement traits to wire up your application.
 
 This trivial example illustrates the bare minimum boilerplate to use the framework with its macros, but doesn't actually run anything useful.
 
@@ -48,11 +48,7 @@ async fn main() -> anyhow::Result<Never> {
 
 pub struct MyApp;
 
-impl Initialize for MyApp {
-    fn init(&self) -> Vec<Arc<dyn Job>> {
-        vec![]
-    }
-}
+impl Initialize for MyApp {}
 
 impl Serves for MyApp {
     fn services(&self) -> Vec<Box<dyn Service>> {
@@ -61,8 +57,7 @@ impl Serves for MyApp {
 }
 ```
 
-
-To take full advantage of app-frame, you should define dependency relationships and explicitly declare all the components that you want to run as part of your application.
+To take full advantage of app-frame, you should define dependency relationships and explicitly declare every component that you want to run as part of your application.
 
 ### Make Components Injectible
 
