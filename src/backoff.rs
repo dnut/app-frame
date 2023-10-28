@@ -6,6 +6,8 @@ use std::sync::Arc;
 use crate::time::Clock;
 use crate::time::SystemClock;
 
+/// Tracks events that you don't want to repeat very often, and lets you know
+/// when it's safe to take the action that may cause those events.
 pub struct BackoffTracker<T> {
     field: HashMap<T, BackoffEntry>,
     clock: Arc<dyn Clock>,
@@ -180,8 +182,11 @@ struct BackoffEntry {
 }
 
 pub struct BackoffConfig {
+    /// The minimum amount of time to wait before trying again.
     pub min_delay: u64,
+    /// The maximum amount of time to wait before trying again.
     pub max_delay: u64,
+    /// How to progress from min_delay to max_delay.
     pub strategy: BackoffStrategy,
 }
 
