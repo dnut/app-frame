@@ -28,7 +28,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! app_frame = "0.2.1"
+//! app_frame = "0.3.0"
 //! ```
 //!
 //! App Frame provides macros for convenience. If they feel too esoteric or

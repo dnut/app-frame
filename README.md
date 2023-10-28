@@ -16,7 +16,7 @@ Application frameworks add complexity and obscure control flow, but they can als
 
 ```toml
 [dependencies]
-app_frame = "0.2.1"
+app_frame = "0.3.0"
 ```
 
 App Frame provides macros for convenience. If they feel too esoteric or inflexible, you can alternatively implement traits to wire up your application.
