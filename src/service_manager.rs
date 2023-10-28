@@ -7,25 +7,43 @@ use std::{
     time::Duration,
 };
 
-use anyhow::bail;
+use anyhow::{bail, ensure};
 use futures::lock::Mutex;
 use futures::FutureExt;
 use tokio::task::JoinHandle;
 
+use super::service::Job;
+use crate::health_endpoint;
+use crate::service::Service;
 use crate::{
     error::display_error,
+    health_endpoint::HealthEndpointConfig,
     time::{Clock, Sleeper, SystemClock, TokioSleeper},
     Never, ToError,
 };
 
-use crate::health_endpoint;
-use crate::service::Service;
-
-use super::service::Job;
-
 #[async_trait::async_trait]
 pub trait Application: Initialize + Serves {
-    async fn run(&self, log_interval: i32) -> anyhow::Result<Never> {
+    /// Starts the app and runs forever with default monitoring
+    async fn run(&self) -> anyhow::Result<Never> {
+        self.run_custom(Default::default()).await
+    }
+
+    /// Starts the app and runs forever with configured monitoring
+    async fn run_custom(&self, config: RunConfig) -> anyhow::Result<Never> {
+        config.validate()?;
+        let mgr = Arc::new(self.start().await?);
+        if let Some(config) = config.http_health_endpoint {
+            let mgr2 = mgr.clone();
+            tokio::spawn(async move { health_endpoint::run(mgr2, config).await });
+        }
+        Ok(mgr
+            .monitor_with_recovery(10, config.log_interval, config.attempt_recovery_after)
+            .await)
+    }
+
+    /// Starts the app and returns, so you may implement custom monitoring.
+    async fn start(&self) -> anyhow::Result<ServiceManager> {
         tracing::info!("Initializing application.");
         self.init().run_once().await?;
         let mut mgr = ServiceManager::new(
@@ -37,13 +55,37 @@ pub trait Application: Initialize + Serves {
         }
         tracing::info!("Starting Services.");
         mgr.spawn_services().await?;
-        let mgr = Arc::new(mgr);
-        let mgr2 = mgr.clone();
-        tokio::spawn(async move { health_endpoint::run(mgr2).await });
-        Ok(mgr.monitor_with_recovery(10, log_interval).await)
+        Ok(mgr)
     }
 }
 impl<T: Initialize + Serves> Application for T {}
+
+pub struct RunConfig {
+    /// Interval in seconds between application status log messages when there are no problems.
+    pub log_interval: i32,
+    /// Services will be restarted after they have been in a failing state for this many seconds.
+    pub attempt_recovery_after: i32,
+    /// Set to None to disable the http health endpoint.
+    pub http_health_endpoint: Option<HealthEndpointConfig>,
+}
+
+impl RunConfig {
+    fn validate(&self) -> anyhow::Result<()> {
+        ensure!(self.log_interval >= 0);
+        ensure!(self.attempt_recovery_after >= 0);
+        Ok(())
+    }
+}
+
+impl Default for RunConfig {
+    fn default() -> Self {
+        Self {
+            log_interval: 21600,
+            attempt_recovery_after: 120,
+            http_health_endpoint: Some(Default::default()),
+        }
+    }
+}
 
 pub trait Initialize {
     /// Returns the jobs that should run once before initializing the long
@@ -112,7 +154,12 @@ impl ServiceManager {
     }
 
     /// If a service is dead for over two minutes, try to restart it.
-    pub async fn monitor_with_recovery(&self, check_interval: u64, log_interval: i32) -> Never {
+    pub async fn monitor_with_recovery(
+        &self,
+        check_interval: u64,
+        log_interval: i32,
+        attempt_recovery_after: i32,
+    ) -> Never {
         let mut publisher = ServiceReportPublisher::new(log_interval);
         loop {
             let report = self.check();
@@ -124,7 +171,7 @@ impl ServiceManager {
             } in report.dead
             {
                 let svc = &self.managed_services[index];
-                if since + 120 < self.clock.current_timestamp() as i32 {
+                if since + attempt_recovery_after < self.clock.current_timestamp() as i32 {
                     if let Err(e) = svc.restart(Duration::from_secs(10)).await {
                         tracing::error!(
                             "Failed to restart {}: {}",
